@@ -9,6 +9,7 @@ It provides:
 - expected outputs for the public synthetic examples,
 - blocked, stale-evidence, and certificate-eligible Verify outcomes,
 - dedicated cyber-baseline and AI-governance corridor packs,
+- the promoted storage-encryption slice in the medium and issued ExampleCo corridors,
 - a small executable consistency check for the public examples, their artifact schemas, their control-boundary mapping metadata, their exact-anchor review pilot, their mixed-control decompositions, and their OSCAL projections,
 - a place to document what a verifier must reproduce,
 - a public showcase builder that aggregates several corridor bundles into one company-level ExampleCo story,

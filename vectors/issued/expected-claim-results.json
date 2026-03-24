@@ -3,6 +3,7 @@
   "expectedClaimResults": {
     "EX-CLAIM-201": "proved",
     "EX-CLAIM-202": "proved",
+    "EX-CLAIM-208": "proved",
     "EX-CLAIM-203": "attested",
     "EX-CLAIM-204": "attested",
     "EX-CLAIM-205": "proved",
