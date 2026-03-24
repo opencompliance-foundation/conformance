@@ -1,0 +1,14 @@
+{
+  "bundleId": "exampleco-minimal-bundle-2026-03-24",
+  "requiredReplayResult": "exact_match",
+  "requiredArtifacts": [
+    {
+      "path": "proof-bundle.json",
+      "sha256": "e7a394ad1a8950487623716877dfdf1c10483def8c217c86f5ad081bcc9141f2"
+    },
+    {
+      "path": "trust-surface-report.md",
+      "sha256": "5c98c489ef4fb01f362591ede4c4f3598b0480faba2fcaa3a6dcf05cc36d4143"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "bundleId": "exampleco-minimal-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-001": "proved",
+    "EX-CLAIM-002": "proved",
+    "EX-CLAIM-003": "attested",
+    "EX-CLAIM-004": "judgment_required",
+    "EX-CLAIM-005": "evidence_missing"
+  }
+}
