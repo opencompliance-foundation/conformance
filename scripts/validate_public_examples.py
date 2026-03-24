@@ -186,8 +186,10 @@ def validate_schema_subset(instance, schema: dict, path: str, errors: list[str])
 
 
 def validate_payloads(evidence_claims: list[dict], schema_root: Path, errors: list[str]) -> None:
+    envelope_schema = load_json(schema_root / "schemas" / "evidence-claim.schema.json")
     claim_type_root = schema_root / "schemas" / "claim-types"
     for claim in evidence_claims:
+        validate_schema_subset(claim, envelope_schema, claim["claimId"], errors)
         claim_type = claim["claimType"]
         schema_path = claim_type_root / f"{claim_type}.schema.json"
         if not schema_path.exists():
@@ -214,11 +216,19 @@ def validate_fixture(
     replay_bundle = load_json(fixture_root / "replay-bundle.json")
     evidence_claims = load_json(fixture_root / "evidence-claims.json")
     witness_receipt = load_json(fixture_root / "witness-receipt.json")
+    revocation = load_json(fixture_root / "revocation.json")
     expected_summary = load_json(vector_root / "expected-summary.json")
     expected_claim_results = load_json(vector_root / "expected-claim-results.json")
     expected_witness = load_json(vector_root / "expected-witness.json")
     schema_example = load_json(schema_root / "examples" / "evidence-claim.example.json")
     control_boundaries = load_json(specs_root / "control-boundaries.json")
+    proof_bundle_schema = load_json(specs_root / "schemas" / "proof-bundle.schema.json")
+    verification_result_schema = load_json(specs_root / "schemas" / "verification-result.schema.json")
+    replay_bundle_schema = load_json(specs_root / "schemas" / "replay-bundle.schema.json")
+    certificate_schema = load_json(specs_root / "schemas" / "certificate.schema.json")
+    punch_list_schema = load_json(specs_root / "schemas" / "punch-list.schema.json")
+    witness_receipt_schema = load_json(specs_root / "schemas" / "witness-receipt.schema.json")
+    revocation_schema = load_json(specs_root / "schemas" / "revocation.schema.json")
     boundaries_by_id = {
         control["controlId"]: control for control in control_boundaries["controls"]
     }
@@ -266,6 +276,12 @@ def validate_fixture(
     if actual_counts != proof_bundle["summary"]:
         add_error(errors, f"{fixture}: proof bundle summary is inconsistent with claim results")
 
+    validate_schema_subset(proof_bundle, proof_bundle_schema, f"{fixture}.proof_bundle", errors)
+    validate_schema_subset(verification_result, verification_result_schema, f"{fixture}.verification_result", errors)
+    validate_schema_subset(replay_bundle, replay_bundle_schema, f"{fixture}.replay_bundle", errors)
+    validate_schema_subset(witness_receipt, witness_receipt_schema, f"{fixture}.witness_receipt", errors)
+    validate_schema_subset(revocation, revocation_schema, f"{fixture}.revocation", errors)
+
     witness_required = {
         item["path"]: item["sha256"] for item in expected_witness["requiredArtifacts"]
     }
@@ -292,10 +308,14 @@ def validate_fixture(
     outcome_artifact_path = verification_result["outcomeArtifact"]["path"]
     if not (fixture_root / outcome_artifact_path).exists():
         add_error(errors, f"{fixture}: outcome artifact {outcome_artifact_path} does not exist")
-    elif verification_result["outcomeArtifact"]["sha256"] != sha256_json(fixture_root / outcome_artifact_path):
+    expected_outcome = "certificate_issued" if actual_counts["judgmentRequired"] == 0 and actual_counts["evidenceMissing"] == 0 else "punch_list_issued"
+    outcome_artifact = load_json(fixture_root / outcome_artifact_path) if (fixture_root / outcome_artifact_path).exists() else None
+    if outcome_artifact is not None:
+        outcome_schema = certificate_schema if expected_outcome == "certificate_issued" else punch_list_schema
+        validate_schema_subset(outcome_artifact, outcome_schema, f"{fixture}.{outcome_artifact_path}", errors)
+    if (fixture_root / outcome_artifact_path).exists() and verification_result["outcomeArtifact"]["sha256"] != sha256_json(fixture_root / outcome_artifact_path):
         add_error(errors, f"{fixture}: outcome artifact digest does not match verification-result")
 
-    expected_outcome = "certificate_issued" if actual_counts["judgmentRequired"] == 0 and actual_counts["evidenceMissing"] == 0 else "punch_list_issued"
     if verification_result["outcome"] != expected_outcome:
         add_error(errors, f"{fixture}: verification-result outcome is inconsistent with the proof summary")
     expected_path = "certificate.json" if expected_outcome == "certificate_issued" else "punch-list.json"

@@ -8,7 +8,7 @@ It provides:
 
 - expected outputs for the public synthetic examples,
 - both blocked and certificate-eligible Verify outcomes,
-- a small executable consistency check for the public examples and their OSCAL projections,
+- a small executable consistency check for the public examples, their artifact schemas, and their OSCAL projections,
 - a place to document what a verifier must reproduce,
 - and a public statement of what does not yet exist.
 
