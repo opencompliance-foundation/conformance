@@ -406,6 +406,47 @@ def validate_fixture(
         add_error(errors, f"{fixture}: proofRunner theoremCount does not match verifiedClaims")
     if proof_runner["importedModules"] != sorted({record["module"] for record in verified_claim_records}):
         add_error(errors, f"{fixture}: proofRunner importedModules do not match verifiedClaims")
+    typed_boundary_layer = proof_runner["typedBoundaryLayer"]
+    if typed_boundary_layer["source"] != "LegalLean":
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer source must be LegalLean")
+    dependency = typed_boundary_layer["dependency"]
+    if dependency["package"] != "legal-lean":
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer dependency package must be legal-lean")
+    if dependency["primaryImports"] != ["LegalLean.Core", "LegalLean.Defeasible", "LegalLean.Solver"]:
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer primaryImports are inconsistent")
+    expected_typed_modules = {
+        "OpenCompliance.Controls.Typed.TypedIdentity": {
+            "FormalisationBoundary.formal",
+            "FormalisationBoundary.boundary",
+            "RequiresHumanDetermination",
+        },
+        "OpenCompliance.Controls.Typed.RiskAcceptance": {
+            "Defeats",
+            "risk_acceptance_override",
+        },
+        "OpenCompliance.Controls.Typed.DiscretionaryTerms": {
+            "Vague",
+            "judgment_boundary_inventory",
+        },
+        "OpenCompliance.Controls.Typed.ComplianceSolver": {
+            "LegalLean.Solver",
+            "minimal_claim_corpus",
+        },
+    }
+    actual_typed_modules = {
+        item["module"]: set(item["covers"]) for item in typed_boundary_layer["typedModules"]
+    }
+    if actual_typed_modules != expected_typed_modules:
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer modules are inconsistent")
+    expected_runtime_status = {
+        "typedControlResultsLive": True,
+        "riskAcceptanceDefeasibilityLive": True,
+        "discretionaryTermTypingLive": True,
+        "fullMinimalSolverAgreement": False,
+        "pythonVerdictLayerReplaced": False,
+    }
+    if typed_boundary_layer["runtimeStatus"] != expected_runtime_status:
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeStatus is inconsistent")
 
     validate_schema_subset(proof_bundle, proof_bundle_schema, f"{fixture}.proof_bundle", errors)
     validate_schema_subset(classification_result, classification_result_schema, f"{fixture}.classification_result", errors)
