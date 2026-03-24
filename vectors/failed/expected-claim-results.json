@@ -1,0 +1,9 @@
+{
+  "bundleId": "exampleco-failed-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-301": "proved",
+    "EX-CLAIM-302": "failed",
+    "EX-CLAIM-303": "attested",
+    "EX-CLAIM-304": "judgment_required"
+  }
+}

@@ -39,3 +39,19 @@ The old single-fixture command still exists:
 cd projects/dev/opencompliance
 python3 conformance/scripts/validate_minimal_example.py
 ```
+
+## Refresh the descriptive vectors
+
+When the checked-in synthetic fixtures change, repin the descriptive vectors from the current artifacts:
+
+```sh
+cd projects/dev/opencompliance
+python3 conformance/scripts/refresh_public_vectors.py
+```
+
+To repin only one fixture:
+
+```sh
+cd projects/dev/opencompliance
+python3 conformance/scripts/refresh_public_vectors.py --fixture issued
+```

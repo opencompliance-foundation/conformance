@@ -2,10 +2,11 @@
 
 ## What exists today
 
-- Descriptive vectors for the synthetic minimal, medium, and issued examples.
+- Descriptive vectors for the synthetic minimal, failed, medium, and issued examples.
 - Expected summary counts and claim-result mappings.
 - Witness-receipt and replay-bundle expectations tied to the same examples.
 - A small executable consistency check covering the native bundles, evidence and artifact schemas, machine-readable control boundaries, witness digests, and seed OSCAL projections.
+- A deterministic refresh script that repins the descriptive vectors from the checked-in synthetic fixtures.
 
 ## What does not exist yet
 

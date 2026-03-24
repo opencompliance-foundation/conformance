@@ -121,6 +121,7 @@ def resolve_examples_fixture_root(examples_root: Path, fixture: str) -> Path:
 def expected_oscal_paths(oscal_root: Path, fixture: str) -> dict[str, Path]:
     mapping_name = {
         "minimal": "iso27001-soc2-family-overlap-mapping.json",
+        "failed": "iso27001-soc2-family-overlap-mapping.json",
         "medium": "iso27001-soc2-irap-gdpr-family-overlap-mapping.json",
         "issued": "iso27001-soc2-family-overlap-mapping.json",
     }[fixture]
@@ -265,6 +266,7 @@ def validate_fixture(
     result_key_map = {
         "proved": "proved",
         "attested": "attested",
+        "failed": "failed",
         "judgment_required": "judgmentRequired",
         "evidence_missing": "evidenceMissing",
     }
@@ -308,7 +310,11 @@ def validate_fixture(
     outcome_artifact_path = verification_result["outcomeArtifact"]["path"]
     if not (fixture_root / outcome_artifact_path).exists():
         add_error(errors, f"{fixture}: outcome artifact {outcome_artifact_path} does not exist")
-    expected_outcome = "certificate_issued" if actual_counts["judgmentRequired"] == 0 and actual_counts["evidenceMissing"] == 0 else "punch_list_issued"
+    expected_outcome = (
+        "certificate_issued"
+        if actual_counts["failed"] == 0 and actual_counts["judgmentRequired"] == 0 and actual_counts["evidenceMissing"] == 0
+        else "punch_list_issued"
+    )
     outcome_artifact = load_json(fixture_root / outcome_artifact_path) if (fixture_root / outcome_artifact_path).exists() else None
     if outcome_artifact is not None:
         outcome_schema = certificate_schema if expected_outcome == "certificate_issued" else punch_list_schema
@@ -321,7 +327,9 @@ def validate_fixture(
     expected_path = "certificate.json" if expected_outcome == "certificate_issued" else "punch-list.json"
     if outcome_artifact_path != expected_path:
         add_error(errors, f"{fixture}: verification-result points at {outcome_artifact_path} but expected {expected_path}")
-    if verification_result["blockingIssueCount"] != actual_counts["judgmentRequired"] + actual_counts["evidenceMissing"]:
+    if verification_result["blockingIssueCount"] != (
+        actual_counts["failed"] + actual_counts["judgmentRequired"] + actual_counts["evidenceMissing"]
+    ):
         add_error(errors, f"{fixture}: verification-result blockingIssueCount is inconsistent with proof summary")
     if verification_result["proofBundleSha256"] != sha256_json(fixture_root / "proof-bundle.json"):
         add_error(errors, f"{fixture}: verification-result proof bundle digest is inconsistent")
@@ -402,9 +410,9 @@ def validate_fixture(
             for control_ref in control_refs:
                 classification = boundaries_by_id[control_ref]["classification"]
                 if classification == "decidable":
-                    allowed_results.update({"proved", "evidence_missing"})
+                    allowed_results.update({"proved", "failed", "evidence_missing"})
                 elif classification == "attestation":
-                    allowed_results.update({"attested", "evidence_missing"})
+                    allowed_results.update({"attested", "failed", "evidence_missing"})
                 elif classification == "judgment":
                     allowed_results.add("judgment_required")
             if claim["result"] not in allowed_results:
@@ -491,7 +499,7 @@ def main() -> int:
     parser.add_argument("--specs-root", help="Path to the specs repo root.")
     parser.add_argument(
         "--fixture",
-        choices=["minimal", "medium", "issued", "all"],
+        choices=["minimal", "failed", "medium", "issued", "all"],
         default="all",
         help="Which fixture set to validate.",
     )

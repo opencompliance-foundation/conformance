@@ -3,6 +3,7 @@
   "expectedCounts": {
     "proved": 6,
     "attested": 4,
+    "failed": 0,
     "judgmentRequired": 1,
     "evidenceMissing": 1
   }
