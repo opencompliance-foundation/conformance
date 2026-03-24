@@ -35,6 +35,48 @@ def sha256_artifact(path: Path) -> str:
     return sha256_file(path)
 
 
+def canonical_json_bytes(value) -> bytes:
+    return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def sha256_bytes(value: bytes) -> str:
+    digest = hashlib.sha256()
+    digest.update(value)
+    return digest.hexdigest()
+
+
+def leaf_hash(entry: dict) -> str:
+    return sha256_bytes(canonical_json_bytes(entry))
+
+
+def hash_pair(left: str, right: str) -> str:
+    return sha256_bytes(f"{left}{right}".encode("utf-8"))
+
+
+def merkle_root(leaf_hashes: list[str]) -> str:
+    if not leaf_hashes:
+        raise ValueError("cannot compute a Merkle root for an empty log")
+    level = list(leaf_hashes)
+    while len(level) > 1:
+        next_level = []
+        for index in range(0, len(level), 2):
+            left = level[index]
+            right = level[index + 1] if index + 1 < len(level) else left
+            next_level.append(hash_pair(left, right))
+        level = next_level
+    return level[0]
+
+
+def verify_inclusion_proof(leaf_hash_value: str, proof: list[dict], expected_root: str) -> bool:
+    current = leaf_hash_value
+    for item in proof:
+        if item["position"] == "left":
+            current = hash_pair(item["hash"], current)
+        else:
+            current = hash_pair(current, item["hash"])
+    return current == expected_root
+
+
 def detect_paths(
     script_path: Path,
     examples_override: str | None,
@@ -218,6 +260,8 @@ def validate_fixture(
     evidence_claims = load_json(fixture_root / "evidence-claims.json")
     witness_receipt = load_json(fixture_root / "witness-receipt.json")
     revocation = load_json(fixture_root / "revocation.json")
+    transparency_log = load_json(fixture_root / "transparency-log.json")
+    inclusion_proofs = load_json(fixture_root / "inclusion-proofs.json")
     expected_summary = load_json(vector_root / "expected-summary.json")
     expected_claim_results = load_json(vector_root / "expected-claim-results.json")
     expected_witness = load_json(vector_root / "expected-witness.json")
@@ -230,6 +274,8 @@ def validate_fixture(
     punch_list_schema = load_json(specs_root / "schemas" / "punch-list.schema.json")
     witness_receipt_schema = load_json(specs_root / "schemas" / "witness-receipt.schema.json")
     revocation_schema = load_json(specs_root / "schemas" / "revocation.schema.json")
+    transparency_log_schema = load_json(specs_root / "schemas" / "transparency-log.schema.json")
+    inclusion_proofs_schema = load_json(specs_root / "schemas" / "inclusion-proofs.schema.json")
     boundaries_by_id = {
         control["controlId"]: control for control in control_boundaries["controls"]
     }
@@ -283,6 +329,8 @@ def validate_fixture(
     validate_schema_subset(replay_bundle, replay_bundle_schema, f"{fixture}.replay_bundle", errors)
     validate_schema_subset(witness_receipt, witness_receipt_schema, f"{fixture}.witness_receipt", errors)
     validate_schema_subset(revocation, revocation_schema, f"{fixture}.revocation", errors)
+    validate_schema_subset(transparency_log, transparency_log_schema, f"{fixture}.transparency_log", errors)
+    validate_schema_subset(inclusion_proofs, inclusion_proofs_schema, f"{fixture}.inclusion_proofs", errors)
 
     witness_required = {
         item["path"]: item["sha256"] for item in expected_witness["requiredArtifacts"]
@@ -335,6 +383,55 @@ def validate_fixture(
         add_error(errors, f"{fixture}: verification-result proof bundle digest is inconsistent")
     if verification_result["trustSurfaceSha256"] != sha256_artifact(fixture_root / "trust-surface-report.md"):
         add_error(errors, f"{fixture}: verification-result trust surface digest is inconsistent")
+
+    expected_log_paths = [
+        "profile.json",
+        "evidence-claims.json",
+        "proof-bundle.json",
+        "trust-surface-report.md",
+        "verification-result.json",
+        outcome_artifact_path,
+        "replay-bundle.json",
+        "witness-receipt.json",
+        "revocation.json",
+    ]
+    if transparency_log["bundleId"] != bundle_id:
+        add_error(errors, f"{fixture}: transparency log bundleId does not match proof bundle")
+    if inclusion_proofs["bundleId"] != bundle_id:
+        add_error(errors, f"{fixture}: inclusion proofs bundleId does not match proof bundle")
+    if inclusion_proofs["rootHash"] != transparency_log["rootHash"]:
+        add_error(errors, f"{fixture}: inclusion proofs root hash does not match transparency log")
+    if [entry["path"] for entry in transparency_log["entries"]] != expected_log_paths:
+        add_error(errors, f"{fixture}: transparency log paths do not match the expected artifact set")
+    proofs_by_path = {item["path"]: item for item in inclusion_proofs["proofs"]}
+    if set(proofs_by_path) != set(expected_log_paths):
+        add_error(errors, f"{fixture}: inclusion proofs do not cover the expected artifact set")
+    leaf_hashes = [entry["leafHash"] for entry in transparency_log["entries"]]
+    if merkle_root(leaf_hashes) != transparency_log["rootHash"]:
+        add_error(errors, f"{fixture}: transparency log root does not match leaf hashes")
+    for expected_index, entry in enumerate(transparency_log["entries"]):
+        if entry["index"] != expected_index:
+            add_error(errors, f"{fixture}: transparency log entry index is inconsistent")
+        artifact_path = fixture_root / entry["path"]
+        if entry["artifactSha256"] != sha256_artifact(artifact_path):
+            add_error(errors, f"{fixture}: transparency log artifact digest is inconsistent for {entry['path']}")
+        calculated_leaf = leaf_hash(
+            {
+                "index": entry["index"],
+                "artifactType": entry["artifactType"],
+                "path": entry["path"],
+                "artifactSha256": entry["artifactSha256"],
+            }
+        )
+        if entry["leafHash"] != calculated_leaf:
+            add_error(errors, f"{fixture}: transparency log leaf hash is inconsistent for {entry['path']}")
+        proof_item = proofs_by_path.get(entry["path"])
+        if proof_item is None:
+            continue
+        if proof_item["leafHash"] != entry["leafHash"]:
+            add_error(errors, f"{fixture}: inclusion proof leaf hash mismatch for {entry['path']}")
+        if not verify_inclusion_proof(entry["leafHash"], proof_item["proof"], transparency_log["rootHash"]):
+            add_error(errors, f"{fixture}: inclusion proof failed for {entry['path']}")
 
     if schema_example["controlMappings"][0]["controlId"] != "soc2.family.access_control":
         add_error(errors, "schema example was not updated to use proxy controlId values")
@@ -520,7 +617,7 @@ def main() -> int:
             print(f"ERROR: {error}")
         return 1
 
-    print("validated public example bundles, payload schemas, witness digests, and OSCAL projections")
+    print("validated public example bundles, payload schemas, witness digests, transparency logs, and OSCAL projections")
     print(f"examples_root={examples_root}")
     print(f"schema_root={schema_root}")
     print(f"specs_root={specs_root}")
