@@ -11,6 +11,7 @@ It provides:
 - dedicated cyber-baseline and AI-governance corridor packs,
 - a small executable consistency check for the public examples, their artifact schemas, their control-boundary mapping metadata, their exact-anchor review pilot, their mixed-control decompositions, and their OSCAL projections,
 - a place to document what a verifier must reproduce,
+- a public showcase builder that aggregates several corridor bundles into one company-level ExampleCo story,
 - and a public statement of what does not yet exist.
 
 ## Run the public consistency checks
@@ -55,4 +56,25 @@ To repin only one fixture:
 ```sh
 cd projects/dev/opencompliance
 python3 conformance/scripts/refresh_public_vectors.py --fixture stale
+```
+
+## Build the ExampleCo showcase summary
+
+Inside the private source tree:
+
+```sh
+cd projects/dev/opencompliance
+python3 conformance/scripts/build_showcase_manifest.py \
+  --showcase-root fixtures/public/exampleco-showcase \
+  --check
+```
+
+Inside a public multi-repo checkout:
+
+```sh
+cd conformance
+python3 scripts/build_showcase_manifest.py \
+  --examples-root ../examples \
+  --showcase-root exampleco-showcase \
+  --check
 ```

@@ -8,6 +8,7 @@
 - Public transparency-log and inclusion-proof validation tied to the same examples.
 - A small executable consistency check covering the native bundles, classification artifacts, mixed-control decompositions, evidence and artifact schemas, machine-readable control boundaries, control-boundary mapping maturity metadata, the exact-anchor review pilot, witness digests, and seed OSCAL projections.
 - A deterministic refresh script that repins the descriptive vectors from the checked-in synthetic fixtures.
+- A deterministic showcase builder that aggregates the public ExampleCo corridors into one company-level report and summary.
 
 ## What does not exist yet
 
