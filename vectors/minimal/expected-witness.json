@@ -4,7 +4,7 @@
   "requiredArtifacts": [
     {
       "path": "proof-bundle.json",
-      "sha256": "e7a394ad1a8950487623716877dfdf1c10483def8c217c86f5ad081bcc9141f2"
+      "sha256": "65716cb47915c675d65c0fcd1468b844e9a31dbeada2d7f49bd3610dd16b5fc6"
     },
     {
       "path": "trust-surface-report.md",
