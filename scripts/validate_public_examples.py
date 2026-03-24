@@ -269,6 +269,7 @@ def validate_fixture(
     expected_witness = load_json(vector_root / "expected-witness.json")
     schema_example = load_json(schema_root / "examples" / "evidence-claim.example.json")
     control_boundaries = load_json(specs_root / "control-boundaries.json")
+    control_boundaries_schema = load_json(specs_root / "schemas" / "control-boundaries.schema.json")
     proof_bundle_schema = load_json(specs_root / "schemas" / "proof-bundle.schema.json")
     classification_result_schema = load_json(specs_root / "schemas" / "classification-result.schema.json")
     verification_result_schema = load_json(specs_root / "schemas" / "verification-result.schema.json")
@@ -282,6 +283,19 @@ def validate_fixture(
     boundaries_by_id = {
         control["controlId"]: control for control in control_boundaries["controls"]
     }
+
+    validate_schema_subset(control_boundaries, control_boundaries_schema, "control_boundaries", errors)
+    mapping_model = control_boundaries["mappingModel"]
+    if control_boundaries["mappingLevel"] != mapping_model["currentState"]["level"]:
+        add_error(errors, "control-boundaries mappingLevel does not match mappingModel.currentState.level")
+    for control in control_boundaries["controls"]:
+        mapping_status = control["mappingStatus"]
+        if mapping_status["currentAnchorKind"] != control_boundaries["mappingLevel"]:
+            add_error(errors, f"control-boundaries {control['controlId']} currentAnchorKind does not match mappingLevel")
+        source_frameworks = {mapping["framework"] for mapping in control["sourceMappings"]}
+        target_frameworks = {plan["framework"] for plan in mapping_status["targetAnchorPlans"]}
+        if source_frameworks != target_frameworks:
+            add_error(errors, f"control-boundaries {control['controlId']} targetAnchorPlans do not cover the same frameworks as sourceMappings")
 
     oscal_paths = expected_oscal_paths(oscal_root, fixture)
     catalog = load_json(oscal_paths["catalog"])
