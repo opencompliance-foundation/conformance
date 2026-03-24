@@ -328,6 +328,17 @@ def validate_fixture(
     if actual_counts != proof_bundle["summary"]:
         add_error(errors, f"{fixture}: proof bundle summary is inconsistent with claim results")
 
+    proof_runner = proof_bundle["proofRunner"]
+    verified_claim_records = proof_runner["verifiedClaims"]
+    runner_records_by_claim = {record["claimId"]: record for record in verified_claim_records}
+    verified_claim_ids = set(runner_records_by_claim)
+    if proof_runner["theoremCount"] != len(proof_runner["verifiedTheorems"]):
+        add_error(errors, f"{fixture}: proofRunner theoremCount does not match verifiedTheorems")
+    if proof_runner["theoremCount"] != len(verified_claim_records):
+        add_error(errors, f"{fixture}: proofRunner theoremCount does not match verifiedClaims")
+    if proof_runner["importedModules"] != sorted({record["module"] for record in verified_claim_records}):
+        add_error(errors, f"{fixture}: proofRunner importedModules do not match verifiedClaims")
+
     validate_schema_subset(proof_bundle, proof_bundle_schema, f"{fixture}.proof_bundle", errors)
     validate_schema_subset(classification_result, classification_result_schema, f"{fixture}.classification_result", errors)
     validate_schema_subset(verification_result, verification_result_schema, f"{fixture}.verification_result", errors)
@@ -507,6 +518,7 @@ def validate_fixture(
 
     proof_control_refs: set[str] = set()
     for claim in proof_bundle["claims"]:
+        runner_record = runner_records_by_claim.get(claim["claimId"])
         classification_item = classification_items.get(claim["claimId"])
         if classification_item is None:
             continue
@@ -592,10 +604,40 @@ def validate_fixture(
         )
         if classification_item["leanBacked"] != expected_lean_backed:
             add_error(errors, f"{fixture}: {claim['claimId']} leanBacked is inconsistent with control-boundaries.json")
+        if runner_record is not None:
+            if claim["result"] != "proved":
+                add_error(errors, f"{fixture}: proofRunner verified claim {claim['claimId']} is not proved in the bundle")
+            if runner_record["controlId"] not in control_refs:
+                add_error(errors, f"{fixture}: proofRunner controlId {runner_record['controlId']} is not attached to {claim['claimId']}")
+            boundary = boundaries_by_id.get(runner_record["controlId"])
+            if boundary is None or boundary.get("lean") is None:
+                add_error(errors, f"{fixture}: proofRunner controlId {runner_record['controlId']} is not Lean-backed in control-boundaries.json")
+            else:
+                if runner_record["module"] != boundary["lean"]["module"]:
+                    add_error(errors, f"{fixture}: proofRunner module mismatch for {claim['claimId']}")
+                if runner_record["predicate"] != boundary["lean"]["predicate"]:
+                    add_error(errors, f"{fixture}: proofRunner predicate mismatch for {claim['claimId']}")
+                if runner_record["evidenceClaimType"] != boundary["evidenceClaimType"]:
+                    add_error(errors, f"{fixture}: proofRunner evidenceClaimType mismatch for {claim['claimId']}")
+            if runner_record["theorem"] not in proof_runner["verifiedTheorems"]:
+                add_error(errors, f"{fixture}: proofRunner theorem list is missing {runner_record['theorem']}")
 
     if not catalog_controls.issubset(set(boundaries_by_id)):
         missing = sorted(catalog_controls - set(boundaries_by_id))
         add_error(errors, f"{fixture}: control-boundaries.json is missing catalog controls {missing}")
+
+    boundary_inventory = proof_runner["boundaryInventory"]
+    omitted_proved_claims = boundary_inventory["omittedProvedClaims"]
+    omitted_claim_ids = {item["claimId"] for item in omitted_proved_claims}
+    proved_claim_ids = {claim_id for claim_id, result in actual_claim_results.items() if result == "proved"}
+    if boundary_inventory["provedClaimCount"] != actual_counts["proved"]:
+        add_error(errors, f"{fixture}: proofRunner provedClaimCount is inconsistent with proof summary")
+    if boundary_inventory["leanBackedClaimCount"] != proof_runner["theoremCount"]:
+        add_error(errors, f"{fixture}: proofRunner leanBackedClaimCount is inconsistent with theoremCount")
+    if verified_claim_ids & omitted_claim_ids:
+        add_error(errors, f"{fixture}: proofRunner omitted claims overlap verified claims")
+    if verified_claim_ids | omitted_claim_ids != proved_claim_ids:
+        add_error(errors, f"{fixture}: proofRunner boundary inventory does not partition the proved claims")
 
     mixed_control_refs = {
         control_ref
