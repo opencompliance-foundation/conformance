@@ -10,7 +10,7 @@
     {
       "artifactType": "evidence_claims",
       "path": "evidence-claims.json",
-      "sha256": "8fdb447d7f0f0452cb3ce81af02d337c3af574da886c8a5891bf265049c4e5b6"
+      "sha256": "2392be02c247d5c7697c049db555367cc09fd0260b857a9d49931c5883fd82d5"
     },
     {
       "artifactType": "oscal_catalog",
