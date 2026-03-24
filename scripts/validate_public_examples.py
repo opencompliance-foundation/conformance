@@ -243,6 +243,58 @@ def validate_payloads(evidence_claims: list[dict], schema_root: Path, errors: li
         validate_schema_subset(claim["payload"], schema, f"{claim['claimId']}.payload", errors)
 
 
+def validate_review_pilot(
+    specs_root: Path,
+    control_boundaries: dict,
+    errors: list[str],
+) -> None:
+    review_pilot = load_json(specs_root / "review-pilots" / "exact-anchor-review-pilot.json")
+    review_pilot_schema = load_json(specs_root / "schemas" / "exact-anchor-review-pilot.schema.json")
+    validate_schema_subset(review_pilot, review_pilot_schema, "exact_anchor_review_pilot", errors)
+
+    boundaries_by_id = {control["controlId"]: control for control in control_boundaries["controls"]}
+    if review_pilot["scope"]["controlsCovered"] != len(review_pilot["controls"]):
+        add_error(errors, "exact-anchor review pilot controlsCovered does not match control count")
+
+    counts = {
+        "public_source_reviewed": 0,
+        "candidate_public_source_unreviewed": 0,
+        "blocked_nonpublic_source_review": 0,
+    }
+    for control in review_pilot["controls"]:
+        boundary = boundaries_by_id.get(control["controlId"])
+        if boundary is None:
+            add_error(errors, f"exact-anchor review pilot references unknown control {control['controlId']}")
+            continue
+        boundary_frameworks = {mapping["framework"] for mapping in boundary["sourceMappings"]}
+        for review in control["reviews"]:
+            counts[review["reviewStatus"]] += 1
+            if review["framework"] not in boundary_frameworks:
+                add_error(errors, f"exact-anchor review {control['controlId']} uses framework {review['framework']} outside control-boundaries sourceMappings")
+            if review["reviewStatus"] == "blocked_nonpublic_source_review":
+                if "blocker" not in review:
+                    add_error(errors, f"exact-anchor review {control['controlId']} blocked entry is missing blocker text")
+                if "anchorId" in review:
+                    add_error(errors, f"exact-anchor review {control['controlId']} blocked entry should not publish anchorId")
+                if review["sourceAvailability"] != "licensed_text_required":
+                    add_error(errors, f"exact-anchor review {control['controlId']} blocked entry must use licensed_text_required")
+            else:
+                if "anchorId" not in review:
+                    add_error(errors, f"exact-anchor review {control['controlId']} reviewed/candidate entry is missing anchorId")
+                if review["sourceAvailability"] == "licensed_text_required":
+                    add_error(errors, f"exact-anchor review {control['controlId']} reviewed/candidate entry cannot use licensed_text_required")
+
+    summary = review_pilot["summary"]
+    if counts["public_source_reviewed"] != summary["publicSourceReviewed"]:
+        add_error(errors, "exact-anchor review pilot publicSourceReviewed summary is inconsistent")
+    if counts["candidate_public_source_unreviewed"] != summary["candidatePublicSourceUnreviewed"]:
+        add_error(errors, "exact-anchor review pilot candidatePublicSourceUnreviewed summary is inconsistent")
+    if counts["blocked_nonpublic_source_review"] != summary["blockedNonpublicSourceReview"]:
+        add_error(errors, "exact-anchor review pilot blockedNonpublicSourceReview summary is inconsistent")
+    if sum(counts.values()) != summary["reviewEntries"]:
+        add_error(errors, "exact-anchor review pilot reviewEntries summary is inconsistent")
+
+
 def validate_fixture(
     fixture: str,
     conformance_root: Path,
@@ -745,6 +797,11 @@ def main() -> int:
 
     errors: list[str] = []
     fixture_names = list_fixture_names(conformance_root, args.fixture)
+    validate_review_pilot(
+        specs_root,
+        load_json(specs_root / "control-boundaries.json"),
+        errors,
+    )
     for fixture in fixture_names:
         errors.extend(validate_fixture(fixture, conformance_root, examples_root, schema_root, specs_root))
 

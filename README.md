@@ -8,7 +8,7 @@ It provides:
 
 - expected outputs for the public synthetic examples,
 - blocked, stale-evidence, and certificate-eligible Verify outcomes,
-- a small executable consistency check for the public examples, their artifact schemas, their control-boundary mapping metadata, their mixed-control decompositions, and their OSCAL projections,
+- a small executable consistency check for the public examples, their artifact schemas, their control-boundary mapping metadata, their exact-anchor review pilot, their mixed-control decompositions, and their OSCAL projections,
 - a place to document what a verifier must reproduce,
 - and a public statement of what does not yet exist.
 
