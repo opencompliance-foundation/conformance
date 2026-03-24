@@ -2,6 +2,7 @@
   "bundleId": "exampleco-medium-bundle-2026-03-24",
   "expectedClaimResults": {
     "EX-CLAIM-101": "proved",
+    "EX-CLAIM-128": "proved",
     "EX-CLAIM-102": "proved",
     "EX-CLAIM-103": "proved",
     "EX-CLAIM-124": "proved",
