@@ -26,6 +26,7 @@ Inside a public multi-repo checkout:
 cd conformance
 python3 scripts/validate_public_examples.py \
   --examples-root ../examples \
+  --specs-root ../specs \
   --schema-root ../evidence-schema
 ```
 

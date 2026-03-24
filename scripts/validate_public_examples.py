@@ -22,7 +22,12 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def detect_paths(script_path: Path, examples_override: str | None, schema_override: str | None) -> tuple[Path, Path, Path]:
+def detect_paths(
+    script_path: Path,
+    examples_override: str | None,
+    schema_override: str | None,
+    specs_override: str | None,
+) -> tuple[Path, Path, Path, Path]:
     conformance_root = script_path.parents[1]
 
     if examples_override:
@@ -53,7 +58,21 @@ def detect_paths(script_path: Path, examples_override: str | None, schema_overri
                 "Could not locate the evidence-schema repo. Pass --schema-root."
             )
 
-    return conformance_root, examples_root, schema_root
+    if specs_override:
+        specs_root = Path(specs_override).resolve()
+    else:
+        private_candidate = script_path.parents[2] / "open-specs"
+        public_candidate = conformance_root.parent / "specs"
+        if private_candidate.exists():
+            specs_root = private_candidate
+        elif public_candidate.exists():
+            specs_root = public_candidate
+        else:
+            raise FileNotFoundError(
+                "Could not locate the specs repo. Pass --specs-root."
+            )
+
+    return conformance_root, examples_root, schema_root, specs_root
 
 
 def add_error(errors: list[str], message: str) -> None:
@@ -169,6 +188,7 @@ def validate_fixture(
     conformance_root: Path,
     examples_root: Path,
     schema_root: Path,
+    specs_root: Path,
 ) -> list[str]:
     errors: list[str] = []
     fixture_root = resolve_examples_fixture_root(examples_root, fixture)
@@ -182,6 +202,10 @@ def validate_fixture(
     expected_claim_results = load_json(vector_root / "expected-claim-results.json")
     expected_witness = load_json(vector_root / "expected-witness.json")
     schema_example = load_json(schema_root / "examples" / "evidence-claim.example.json")
+    control_boundaries = load_json(specs_root / "control-boundaries.json")
+    boundaries_by_id = {
+        control["controlId"]: control for control in control_boundaries["controls"]
+    }
 
     oscal_paths = expected_oscal_paths(oscal_root, fixture)
     catalog = load_json(oscal_paths["catalog"])
@@ -273,6 +297,8 @@ def validate_fixture(
         for control_ref in control_refs:
             if control_ref not in catalog_controls:
                 add_error(errors, f"{fixture}: unknown controlRef {control_ref} in {claim['claimId']}")
+            if control_ref not in boundaries_by_id:
+                add_error(errors, f"{fixture}: controlRef {control_ref} is not in control-boundaries.json")
 
         for mapping in framework_mappings:
             control_id = mapping.get("controlId")
@@ -304,6 +330,26 @@ def validate_fixture(
                 )
             if not control_refs:
                 add_error(errors, f"{fixture}: {claim['claimId']} has evidenceRefs but no controlRefs")
+
+        if control_refs:
+            allowed_results: set[str] = set()
+            for control_ref in control_refs:
+                classification = boundaries_by_id[control_ref]["classification"]
+                if classification == "decidable":
+                    allowed_results.update({"proved", "evidence_missing"})
+                elif classification == "attestation":
+                    allowed_results.update({"attested", "evidence_missing"})
+                elif classification == "judgment":
+                    allowed_results.add("judgment_required")
+            if claim["result"] not in allowed_results:
+                add_error(
+                    errors,
+                    f"{fixture}: {claim['claimId']} result {claim['result']} is inconsistent with control-boundaries classification",
+                )
+
+    if not catalog_controls.issubset(set(boundaries_by_id)):
+        missing = sorted(catalog_controls - set(boundaries_by_id))
+        add_error(errors, f"{fixture}: control-boundaries.json is missing catalog controls {missing}")
 
     if proof_control_refs != catalog_controls:
         add_error(errors, f"{fixture}: proof bundle controlRefs do not cover the catalog control set")
@@ -376,6 +422,7 @@ def main() -> int:
     )
     parser.add_argument("--examples-root", help="Path to the examples repo root or private fixtures/public root.")
     parser.add_argument("--schema-root", help="Path to the evidence-schema repo root.")
+    parser.add_argument("--specs-root", help="Path to the specs repo root.")
     parser.add_argument(
         "--fixture",
         choices=["minimal", "medium", "all"],
@@ -385,14 +432,14 @@ def main() -> int:
     args = parser.parse_args()
 
     script_path = Path(__file__).resolve()
-    conformance_root, examples_root, schema_root = detect_paths(
-        script_path, args.examples_root, args.schema_root
+    conformance_root, examples_root, schema_root, specs_root = detect_paths(
+        script_path, args.examples_root, args.schema_root, args.specs_root
     )
 
     errors: list[str] = []
     fixture_names = list_fixture_names(conformance_root, args.fixture)
     for fixture in fixture_names:
-        errors.extend(validate_fixture(fixture, conformance_root, examples_root, schema_root))
+        errors.extend(validate_fixture(fixture, conformance_root, examples_root, schema_root, specs_root))
 
     if errors:
         for error in errors:
@@ -402,6 +449,7 @@ def main() -> int:
     print("validated public example bundles, payload schemas, witness digests, and OSCAL projections")
     print(f"examples_root={examples_root}")
     print(f"schema_root={schema_root}")
+    print(f"specs_root={specs_root}")
     print(f"fixtures={','.join(fixture_names)}")
     return 0
 
