@@ -22,6 +22,19 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_json(path: Path) -> str:
+    value = load_json(path)
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def sha256_artifact(path: Path) -> str:
+    if path.suffix == ".json":
+        return sha256_json(path)
+    return sha256_file(path)
+
+
 def detect_paths(
     script_path: Path,
     examples_override: str | None,
@@ -109,6 +122,7 @@ def expected_oscal_paths(oscal_root: Path, fixture: str) -> dict[str, Path]:
     mapping_name = {
         "minimal": "iso27001-soc2-family-overlap-mapping.json",
         "medium": "iso27001-soc2-irap-gdpr-family-overlap-mapping.json",
+        "issued": "iso27001-soc2-family-overlap-mapping.json",
     }[fixture]
     return {
         "catalog": oscal_root / f"opencompliance-{fixture}-catalog.json",
@@ -196,6 +210,8 @@ def validate_fixture(
     oscal_root = fixture_root / "oscal"
 
     proof_bundle = load_json(fixture_root / "proof-bundle.json")
+    verification_result = load_json(fixture_root / "verification-result.json")
+    replay_bundle = load_json(fixture_root / "replay-bundle.json")
     evidence_claims = load_json(fixture_root / "evidence-claims.json")
     witness_receipt = load_json(fixture_root / "witness-receipt.json")
     expected_summary = load_json(vector_root / "expected-summary.json")
@@ -225,6 +241,10 @@ def validate_fixture(
       add_error(errors, f"{fixture}: expected-witness bundleId does not match proof bundle")
     if witness_receipt["bundleId"] != bundle_id:
       add_error(errors, f"{fixture}: witness-receipt bundleId does not match proof bundle")
+    if verification_result["bundleId"] != bundle_id:
+      add_error(errors, f"{fixture}: verification-result bundleId does not match proof bundle")
+    if replay_bundle["bundleId"] != bundle_id:
+      add_error(errors, f"{fixture}: replay-bundle bundleId does not match proof bundle")
 
     actual_claim_results = {
         claim["claimId"]: claim["result"] for claim in proof_bundle["claims"]
@@ -258,9 +278,35 @@ def validate_fixture(
         add_error(errors, f"{fixture}: witness receipt artifacts do not match expected witness vector")
 
     for rel_path, expected_digest in witness_required.items():
-        digest = sha256_file(fixture_root / rel_path)
+        digest = sha256_artifact(fixture_root / rel_path)
         if digest != expected_digest:
             add_error(errors, f"{fixture}: sha256 mismatch for {rel_path}")
+
+    replay_required = {
+        item["path"]: item["sha256"]
+        for item in replay_bundle["materialInputs"] + replay_bundle["expectedOutputs"]
+    }
+    if replay_required != witness_required:
+        add_error(errors, f"{fixture}: replay-bundle artifacts do not match expected witness vector")
+
+    outcome_artifact_path = verification_result["outcomeArtifact"]["path"]
+    if not (fixture_root / outcome_artifact_path).exists():
+        add_error(errors, f"{fixture}: outcome artifact {outcome_artifact_path} does not exist")
+    elif verification_result["outcomeArtifact"]["sha256"] != sha256_json(fixture_root / outcome_artifact_path):
+        add_error(errors, f"{fixture}: outcome artifact digest does not match verification-result")
+
+    expected_outcome = "certificate_issued" if actual_counts["judgmentRequired"] == 0 and actual_counts["evidenceMissing"] == 0 else "punch_list_issued"
+    if verification_result["outcome"] != expected_outcome:
+        add_error(errors, f"{fixture}: verification-result outcome is inconsistent with the proof summary")
+    expected_path = "certificate.json" if expected_outcome == "certificate_issued" else "punch-list.json"
+    if outcome_artifact_path != expected_path:
+        add_error(errors, f"{fixture}: verification-result points at {outcome_artifact_path} but expected {expected_path}")
+    if verification_result["blockingIssueCount"] != actual_counts["judgmentRequired"] + actual_counts["evidenceMissing"]:
+        add_error(errors, f"{fixture}: verification-result blockingIssueCount is inconsistent with proof summary")
+    if verification_result["proofBundleSha256"] != sha256_json(fixture_root / "proof-bundle.json"):
+        add_error(errors, f"{fixture}: verification-result proof bundle digest is inconsistent")
+    if verification_result["trustSurfaceSha256"] != sha256_artifact(fixture_root / "trust-surface-report.md"):
+        add_error(errors, f"{fixture}: verification-result trust surface digest is inconsistent")
 
     if schema_example["controlMappings"][0]["controlId"] != "soc2.family.access_control":
         add_error(errors, "schema example was not updated to use proxy controlId values")
@@ -425,7 +471,7 @@ def main() -> int:
     parser.add_argument("--specs-root", help="Path to the specs repo root.")
     parser.add_argument(
         "--fixture",
-        choices=["minimal", "medium", "all"],
+        choices=["minimal", "medium", "issued", "all"],
         default="all",
         help="Which fixture set to validate.",
     )

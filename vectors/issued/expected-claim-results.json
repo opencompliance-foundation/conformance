@@ -1,0 +1,9 @@
+{
+  "bundleId": "exampleco-issued-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-201": "proved",
+    "EX-CLAIM-202": "proved",
+    "EX-CLAIM-203": "attested",
+    "EX-CLAIM-204": "attested"
+  }
+}
