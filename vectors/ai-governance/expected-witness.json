@@ -30,17 +30,17 @@
     {
       "artifactType": "trust_surface_report",
       "path": "trust-surface-report.md",
-      "sha256": "1ccbc93fc73eb768c6b47578f0dc9d7090b9e944e7fa63f6d4adf6c07257bf08"
+      "sha256": "7357cb7bef4ea5018af96d020781f86b22d89c1178ae1b28907fda6065cb2ecd"
     },
     {
       "artifactType": "verification_result",
       "path": "verification-result.json",
-      "sha256": "3b1eb2cfd73a79643f1d88e626e9383e5d864fa4fb7c5b0f964703470d8459c4"
+      "sha256": "23e317720b9ffb4ee84b514e8413ad036bb0eaa4952b15b837a8c2f71efbac96"
     },
     {
       "artifactType": "certificate",
       "path": "certificate.json",
-      "sha256": "c7dcff6bf754bc0bd7b643d16c46b2b7defb8660aa6f467ec4fb9bfd9d48fb58"
+      "sha256": "0b2a013937ae827879172058e2140551071a5e8bd4efd7517303b7ad1afe8238"
     }
   ]
 }
