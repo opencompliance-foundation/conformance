@@ -7,7 +7,7 @@ The first release is intentionally small, but it now covers more than one synthe
 It provides:
 
 - expected outputs for the public synthetic examples,
-- both blocked and certificate-eligible Verify outcomes,
+- blocked, stale-evidence, and certificate-eligible Verify outcomes,
 - a small executable consistency check for the public examples, their artifact schemas, and their OSCAL projections,
 - a place to document what a verifier must reproduce,
 - and a public statement of what does not yet exist.
@@ -53,5 +53,5 @@ To repin only one fixture:
 
 ```sh
 cd projects/dev/opencompliance
-python3 conformance/scripts/refresh_public_vectors.py --fixture issued
+python3 conformance/scripts/refresh_public_vectors.py --fixture stale
 ```

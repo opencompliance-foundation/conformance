@@ -1,0 +1,9 @@
+{
+  "bundleId": "exampleco-stale-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-401": "proved",
+    "EX-CLAIM-402": "stale_evidence",
+    "EX-CLAIM-403": "stale_evidence",
+    "EX-CLAIM-404": "attested"
+  }
+}

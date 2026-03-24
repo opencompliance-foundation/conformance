@@ -2,7 +2,7 @@
 
 ## What exists today
 
-- Descriptive vectors for the synthetic minimal, failed, medium, and issued examples.
+- Descriptive vectors for the synthetic minimal, failed, medium, stale, and issued examples.
 - Expected summary counts and claim-result mappings.
 - Witness-receipt and replay-bundle expectations tied to the same examples.
 - Public transparency-log and inclusion-proof validation tied to the same examples.
