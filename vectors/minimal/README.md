@@ -8,4 +8,5 @@ The first conformance checks are deliberately simple:
 2. The claim-result mapping must match.
 3. The summary counts must match.
 4. The witness receipt must only be valid for `exact_match`.
-5. The OSCAL projection must stay internally consistent with the native example set.
+5. The witness receipt must pin both replay inputs and outputs.
+6. The OSCAL projection must stay internally consistent with the native example set.

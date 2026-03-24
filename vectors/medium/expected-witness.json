@@ -1,0 +1,22 @@
+{
+  "bundleId": "exampleco-medium-bundle-2026-03-24",
+  "requiredReplayResult": "exact_match",
+  "requiredArtifacts": [
+    {
+      "path": "profile.json",
+      "sha256": "1f012452d9d9bb77579635a59a24b6dadedb2f60760e9c15e2db876f509760af"
+    },
+    {
+      "path": "evidence-claims.json",
+      "sha256": "1259178242cabba608074882ea4741ffa3835b9f085b5a9777b7d8972e0d54f4"
+    },
+    {
+      "path": "proof-bundle.json",
+      "sha256": "fe8ce964d9d4dc672578ba4293f380db1765d8a1a2bd9e6f442445c31030bbac"
+    },
+    {
+      "path": "trust-surface-report.md",
+      "sha256": "0e73a18bf0a180ea526699996fc22d452b028d2ad6554569f1a9a9393265b339"
+    }
+  ]
+}

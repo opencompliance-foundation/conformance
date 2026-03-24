@@ -1,0 +1,17 @@
+{
+  "bundleId": "exampleco-medium-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-101": "proved",
+    "EX-CLAIM-102": "proved",
+    "EX-CLAIM-103": "proved",
+    "EX-CLAIM-104": "proved",
+    "EX-CLAIM-105": "proved",
+    "EX-CLAIM-106": "proved",
+    "EX-CLAIM-107": "attested",
+    "EX-CLAIM-108": "attested",
+    "EX-CLAIM-109": "attested",
+    "EX-CLAIM-110": "attested",
+    "EX-CLAIM-111": "judgment_required",
+    "EX-CLAIM-112": "evidence_missing"
+  }
+}

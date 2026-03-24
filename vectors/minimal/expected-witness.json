@@ -3,8 +3,16 @@
   "requiredReplayResult": "exact_match",
   "requiredArtifacts": [
     {
+      "path": "profile.json",
+      "sha256": "08825eef2f0f44a9ec31a496861d13570ca21eb06a3540f0ddf8651a82995e31"
+    },
+    {
+      "path": "evidence-claims.json",
+      "sha256": "8766dfbaf5f4cef03d661f19244aac40776d80aad85d81e2d7d3de97418c3337"
+    },
+    {
       "path": "proof-bundle.json",
-      "sha256": "65716cb47915c675d65c0fcd1468b844e9a31dbeada2d7f49bd3610dd16b5fc6"
+      "sha256": "50fe6218cc9ef109b9eca5bc9bf6a61b43c7c86c274b955f776e785641fa806b"
     },
     {
       "path": "trust-surface-report.md",

@@ -2,16 +2,16 @@
 
 ## What exists today
 
-- Descriptive vectors for the synthetic minimal example.
+- Descriptive vectors for the synthetic minimal and medium examples.
 - Expected summary counts and claim-result mappings.
-- A witness-receipt expectation tied to the same example.
-- A small executable consistency check covering the native bundle, witness digests, and seed OSCAL projection.
+- Witness-receipt expectations tied to the same examples.
+- A small executable consistency check covering the native bundles, typed payload schemas, witness digests, and seed OSCAL projections.
 
 ## What does not exist yet
 
 - No executable reference verifier harness.
 - No cross-implementation test matrix.
-- No negative test corpus beyond descriptive notes.
+- No serious negative test corpus beyond descriptive notes.
 
 ## Rule
 
