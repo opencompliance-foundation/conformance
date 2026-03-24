@@ -2,10 +2,10 @@
   "bundleId": "exampleco-medium-bundle-2026-03-24",
   "expectedCounts": {
     "proved": 8,
-    "attested": 5,
+    "attested": 11,
     "failed": 0,
     "staleEvidence": 0,
-    "judgmentRequired": 1,
+    "judgmentRequired": 3,
     "evidenceMissing": 1
   }
 }

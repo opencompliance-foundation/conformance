@@ -15,6 +15,14 @@
     "EX-CLAIM-112": "evidence_missing",
     "EX-CLAIM-113": "proved",
     "EX-CLAIM-114": "proved",
-    "EX-CLAIM-115": "attested"
+    "EX-CLAIM-115": "attested",
+    "EX-CLAIM-116": "attested",
+    "EX-CLAIM-117": "attested",
+    "EX-CLAIM-118": "attested",
+    "EX-CLAIM-119": "judgment_required",
+    "EX-CLAIM-120": "attested",
+    "EX-CLAIM-121": "attested",
+    "EX-CLAIM-122": "attested",
+    "EX-CLAIM-123": "judgment_required"
   }
 }
