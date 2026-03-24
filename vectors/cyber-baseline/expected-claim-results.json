@@ -1,0 +1,10 @@
+{
+  "bundleId": "exampleco-cyber-baseline-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-601": "proved",
+    "EX-CLAIM-602": "proved",
+    "EX-CLAIM-603": "proved",
+    "EX-CLAIM-604": "proved",
+    "EX-CLAIM-605": "proved"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "bundleId": "exampleco-ai-governance-bundle-2026-03-24",
+  "expectedClaimResults": {
+    "EX-CLAIM-701": "attested",
+    "EX-CLAIM-702": "attested",
+    "EX-CLAIM-703": "attested",
+    "EX-CLAIM-704": "attested",
+    "EX-CLAIM-705": "proved"
+  }
+}

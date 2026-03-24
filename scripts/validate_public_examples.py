@@ -167,6 +167,8 @@ def expected_oscal_paths(oscal_root: Path, fixture: str) -> dict[str, Path]:
         "medium": "iso27001-soc2-irap-gdpr-family-overlap-mapping.json",
         "stale": "iso27001-soc2-family-overlap-mapping.json",
         "issued": "iso27001-soc2-family-overlap-mapping.json",
+        "cyber-baseline": "cyber-essentials-baseline-family-overlap-mapping.json",
+        "ai-governance": "ai-governance-family-overlap-mapping.json",
     }[fixture]
     return {
         "catalog": oscal_root / f"opencompliance-{fixture}-catalog.json",

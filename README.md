@@ -2,12 +2,13 @@
 
 This directory is the private source of truth for the first public export to `opencompliance-foundation/conformance`.
 
-The first release is intentionally small, but it now covers more than one synthetic fixture and more than one verification outcome.
+The first release is intentionally small, but it now covers seven synthetic fixtures and more than one verification outcome.
 
 It provides:
 
 - expected outputs for the public synthetic examples,
 - blocked, stale-evidence, and certificate-eligible Verify outcomes,
+- dedicated cyber-baseline and AI-governance corridor packs,
 - a small executable consistency check for the public examples, their artifact schemas, their control-boundary mapping metadata, their exact-anchor review pilot, their mixed-control decompositions, and their OSCAL projections,
 - a place to document what a verifier must reproduce,
 - and a public statement of what does not yet exist.

@@ -27,6 +27,10 @@ def fixture_names(root: Path, fixture: str) -> list[str]:
     )
 
 
+def available_fixture_choices(root: Path) -> list[str]:
+    return ["all", *fixture_names(root, "all")]
+
+
 def build_expected_summary(proof_bundle: dict) -> dict:
     return {
         "bundleId": proof_bundle["bundleId"],
@@ -76,7 +80,7 @@ def refresh_fixture(root: Path, fixture: str) -> None:
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="Refresh synthetic public conformance vectors from checked-in fixtures.")
-    parser.add_argument("--fixture", choices=["all", "minimal", "failed", "medium", "stale", "issued"], default="all")
+    parser.add_argument("--fixture", choices=available_fixture_choices(root), default="all")
     args = parser.parse_args()
 
     for fixture in fixture_names(root, args.fixture):
