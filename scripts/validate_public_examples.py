@@ -840,7 +840,7 @@ def main() -> int:
     parser.add_argument("--specs-root", help="Path to the specs repo root.")
     parser.add_argument(
         "--fixture",
-        choices=["minimal", "failed", "medium", "stale", "issued", "all"],
+        choices=["minimal", "failed", "medium", "stale", "issued", "cyber-baseline", "ai-governance", "all"],
         default="all",
         help="Which fixture set to validate.",
     )
