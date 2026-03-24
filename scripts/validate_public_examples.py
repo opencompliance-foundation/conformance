@@ -420,6 +420,11 @@ def validate_fixture(
             "FormalisationBoundary.boundary",
             "RequiresHumanDetermination",
         },
+        "OpenCompliance.Controls.Typed.TypedLogging": {
+            "FormalisationBoundary.formal",
+            "FormalisationBoundary.boundary",
+            "narrow_audit_logging_runtime",
+        },
         "OpenCompliance.Controls.Typed.RiskAcceptance": {
             "Defeats",
             "risk_acceptance_override",
@@ -431,6 +436,7 @@ def validate_fixture(
         "OpenCompliance.Controls.Typed.ComplianceSolver": {
             "LegalLean.Solver",
             "minimal_claim_corpus",
+            "runtime_claim_decisions",
         },
     }
     actual_typed_modules = {
@@ -438,12 +444,19 @@ def validate_fixture(
     }
     if actual_typed_modules != expected_typed_modules:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer modules are inconsistent")
+    expected_runtime_consumed = {
+        "minimal": {"EX-CLAIM-001", "EX-CLAIM-002", "EX-CLAIM-003", "EX-CLAIM-004", "EX-CLAIM-005"},
+        "failed": {"EX-CLAIM-301", "EX-CLAIM-302", "EX-CLAIM-303", "EX-CLAIM-304"},
+        "stale": {"EX-CLAIM-401", "EX-CLAIM-402", "EX-CLAIM-403", "EX-CLAIM-404"},
+    }.get(fixture, set())
+    if set(typed_boundary_layer["runtimeConsumedClaims"]) != expected_runtime_consumed:
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeConsumedClaims are inconsistent")
     expected_runtime_status = {
         "typedControlResultsLive": True,
         "riskAcceptanceDefeasibilityLive": True,
         "discretionaryTermTypingLive": True,
-        "fullMinimalSolverAgreement": False,
-        "pythonVerdictLayerReplaced": False,
+        "fullMinimalSolverAgreement": fixture == "minimal",
+        "pythonVerdictLayerReplaced": fixture in {"minimal", "failed", "stale"},
     }
     if typed_boundary_layer["runtimeStatus"] != expected_runtime_status:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeStatus is inconsistent")
