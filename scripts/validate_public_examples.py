@@ -255,6 +255,7 @@ def validate_fixture(
     oscal_root = fixture_root / "oscal"
 
     proof_bundle = load_json(fixture_root / "proof-bundle.json")
+    classification_result = load_json(fixture_root / "classification-result.json")
     verification_result = load_json(fixture_root / "verification-result.json")
     replay_bundle = load_json(fixture_root / "replay-bundle.json")
     evidence_claims = load_json(fixture_root / "evidence-claims.json")
@@ -268,6 +269,7 @@ def validate_fixture(
     schema_example = load_json(schema_root / "examples" / "evidence-claim.example.json")
     control_boundaries = load_json(specs_root / "control-boundaries.json")
     proof_bundle_schema = load_json(specs_root / "schemas" / "proof-bundle.schema.json")
+    classification_result_schema = load_json(specs_root / "schemas" / "classification-result.schema.json")
     verification_result_schema = load_json(specs_root / "schemas" / "verification-result.schema.json")
     replay_bundle_schema = load_json(specs_root / "schemas" / "replay-bundle.schema.json")
     certificate_schema = load_json(specs_root / "schemas" / "certificate.schema.json")
@@ -325,6 +327,7 @@ def validate_fixture(
         add_error(errors, f"{fixture}: proof bundle summary is inconsistent with claim results")
 
     validate_schema_subset(proof_bundle, proof_bundle_schema, f"{fixture}.proof_bundle", errors)
+    validate_schema_subset(classification_result, classification_result_schema, f"{fixture}.classification_result", errors)
     validate_schema_subset(verification_result, verification_result_schema, f"{fixture}.verification_result", errors)
     validate_schema_subset(replay_bundle, replay_bundle_schema, f"{fixture}.replay_bundle", errors)
     validate_schema_subset(witness_receipt, witness_receipt_schema, f"{fixture}.witness_receipt", errors)
@@ -383,6 +386,21 @@ def validate_fixture(
         add_error(errors, f"{fixture}: verification-result proof bundle digest is inconsistent")
     if verification_result["trustSurfaceSha256"] != sha256_artifact(fixture_root / "trust-surface-report.md"):
         add_error(errors, f"{fixture}: verification-result trust surface digest is inconsistent")
+
+    if classification_result["bundleId"] != bundle_id:
+        add_error(errors, f"{fixture}: classification-result bundleId does not match proof bundle")
+    if classification_result["organisation"] != proof_bundle["organisation"]:
+        add_error(errors, f"{fixture}: classification-result organisation does not match proof bundle")
+    if classification_result["profileId"] != proof_bundle["profileId"]:
+        add_error(errors, f"{fixture}: classification-result profileId does not match proof bundle")
+    actual_route_counts = {"decidable": 0, "attestation": 0, "judgment": 0}
+    classification_items = {item["claimId"]: item for item in classification_result["items"]}
+    for item in classification_result["items"]:
+        actual_route_counts[item["route"]] = actual_route_counts.get(item["route"], 0) + 1
+    if actual_route_counts != classification_result["routeSummary"]:
+        add_error(errors, f"{fixture}: classification-result routeSummary is inconsistent with its items")
+    if set(classification_items) != set(actual_claim_results):
+        add_error(errors, f"{fixture}: classification-result claims do not match proof-bundle claims")
 
     expected_log_paths = [
         "profile.json",
@@ -458,12 +476,22 @@ def validate_fixture(
 
     proof_control_refs: set[str] = set()
     for claim in proof_bundle["claims"]:
+        classification_item = classification_items.get(claim["claimId"])
+        if classification_item is None:
+            continue
         framework_mappings = claim.get("frameworkMappings", [])
         if not framework_mappings:
             add_error(errors, f"{fixture}: {claim['claimId']} is missing frameworkMappings")
         evidence_refs = claim.get("evidenceRefs", [])
         control_refs = set(claim.get("controlRefs", []))
         proof_control_refs.update(control_refs)
+
+        if classification_item["title"] != claim["title"]:
+            add_error(errors, f"{fixture}: {claim['claimId']} title differs between classification-result and proof bundle")
+        if set(classification_item["controlRefs"]) != control_refs:
+            add_error(errors, f"{fixture}: {claim['claimId']} controlRefs differ between classification-result and proof bundle")
+        if classification_item["evidenceRequired"] != bool(classification_item["expectedClaimType"]):
+            add_error(errors, f"{fixture}: {claim['claimId']} evidenceRequired is inconsistent with expectedClaimType")
 
         for control_ref in control_refs:
             if control_ref not in catalog_controls:
@@ -517,6 +545,22 @@ def validate_fixture(
                     errors,
                     f"{fixture}: {claim['claimId']} result {claim['result']} is inconsistent with control-boundaries classification",
                 )
+
+        route = classification_item["route"]
+        allowed_results_by_route = {
+            "decidable": {"proved", "failed", "evidence_missing"},
+            "attestation": {"attested", "failed", "evidence_missing"},
+            "judgment": {"judgment_required"},
+        }
+        if claim["result"] not in allowed_results_by_route[route]:
+            add_error(errors, f"{fixture}: {claim['claimId']} result {claim['result']} is inconsistent with classification-result route")
+
+        expected_lean_backed = any(
+            boundaries_by_id.get(control_ref, {}).get("lean") is not None
+            for control_ref in control_refs
+        )
+        if classification_item["leanBacked"] != expected_lean_backed:
+            add_error(errors, f"{fixture}: {claim['claimId']} leanBacked is inconsistent with control-boundaries.json")
 
     if not catalog_controls.issubset(set(boundaries_by_id)):
         missing = sorted(catalog_controls - set(boundaries_by_id))
