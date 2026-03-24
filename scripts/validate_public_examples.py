@@ -407,6 +407,31 @@ def validate_fixture(
         add_error(errors, f"{fixture}: classification-result routeSummary is inconsistent with its items")
     if set(classification_items) != set(actual_claim_results):
         add_error(errors, f"{fixture}: classification-result claims do not match proof-bundle claims")
+    for mixed_control in classification_result.get("mixedControls", []):
+        mixed_control_refs = mixed_control.get("controlRefs", [])
+        if set(mixed_control_refs) != {mixed_control["controlId"]}:
+            add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} has inconsistent controlRefs")
+        boundary = boundaries_by_id.get(mixed_control["controlId"])
+        if boundary is None:
+            add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} is not in control-boundaries.json")
+        elif boundary["classification"] != "mixed":
+            add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} is not marked mixed in control-boundaries.json")
+        mixed_route_counts = {"decidable": 0, "attestation": 0, "judgment": 0}
+        seen_claim_ids: set[str] = set()
+        for sub_obligation in mixed_control["subObligations"]:
+            claim_id = sub_obligation["claimId"]
+            if claim_id in seen_claim_ids:
+                add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} repeats {claim_id}")
+            seen_claim_ids.add(claim_id)
+            leaf_item = classification_items.get(claim_id)
+            if leaf_item is None:
+                add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} references unknown claim {claim_id}")
+                continue
+            if leaf_item != sub_obligation:
+                add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} sub-obligation {claim_id} differs from the leaf classification item")
+            mixed_route_counts[sub_obligation["route"]] += 1
+        if mixed_route_counts != mixed_control["decompositionSummary"]:
+            add_error(errors, f"{fixture}: mixed control {mixed_control['controlId']} decompositionSummary is inconsistent with its sub-obligations")
 
     expected_log_paths = [
         "profile.json",
@@ -572,8 +597,13 @@ def validate_fixture(
         missing = sorted(catalog_controls - set(boundaries_by_id))
         add_error(errors, f"{fixture}: control-boundaries.json is missing catalog controls {missing}")
 
-    if proof_control_refs != catalog_controls:
-        add_error(errors, f"{fixture}: proof bundle controlRefs do not cover the catalog control set")
+    mixed_control_refs = {
+        control_ref
+        for mixed_control in classification_result.get("mixedControls", [])
+        for control_ref in mixed_control.get("controlRefs", [])
+    }
+    if proof_control_refs | mixed_control_refs != catalog_controls:
+        add_error(errors, f"{fixture}: proof bundle and mixed-control controlRefs do not cover the catalog control set")
 
     profile_controls = set(
         profile["profile"]["imports"][0]["include-controls"][0]["with-ids"]
