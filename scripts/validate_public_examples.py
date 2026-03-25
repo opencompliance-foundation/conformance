@@ -438,17 +438,19 @@ def validate_fixture(
             "minimal_claim_corpus",
             "runtime_claim_decisions",
         },
+        "OpenCompliance.Controls.Typed.PublicRuntime": {
+            "formalDecision",
+            "documentaryDecision",
+            "judgmentDecision",
+            "public_corridor_runtime_claim_decisions",
+        },
     }
     actual_typed_modules = {
         item["module"]: set(item["covers"]) for item in typed_boundary_layer["typedModules"]
     }
     if actual_typed_modules != expected_typed_modules:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer modules are inconsistent")
-    expected_runtime_consumed = {
-        "minimal": {"EX-CLAIM-001", "EX-CLAIM-002", "EX-CLAIM-003", "EX-CLAIM-004", "EX-CLAIM-005"},
-        "failed": {"EX-CLAIM-301", "EX-CLAIM-302", "EX-CLAIM-303", "EX-CLAIM-304"},
-        "stale": {"EX-CLAIM-401", "EX-CLAIM-402", "EX-CLAIM-403", "EX-CLAIM-404"},
-    }.get(fixture, set())
+    expected_runtime_consumed = set(actual_claim_results)
     if set(typed_boundary_layer["runtimeConsumedClaims"]) != expected_runtime_consumed:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeConsumedClaims are inconsistent")
     expected_runtime_status = {
@@ -456,7 +458,7 @@ def validate_fixture(
         "riskAcceptanceDefeasibilityLive": True,
         "discretionaryTermTypingLive": True,
         "fullMinimalSolverAgreement": fixture == "minimal",
-        "pythonVerdictLayerReplaced": fixture in {"minimal", "failed", "stale"},
+        "pythonVerdictLayerReplaced": True,
     }
     if typed_boundary_layer["runtimeStatus"] != expected_runtime_status:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeStatus is inconsistent")
