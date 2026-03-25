@@ -134,6 +134,12 @@ def add_error(errors: list[str], message: str) -> None:
     errors.append(message)
 
 
+def resolve_descriptor_paths(root: Path, descriptor: dict) -> list[Path]:
+    if "path" in descriptor:
+        return [root / descriptor["path"]]
+    return sorted(root.glob(descriptor["pathPattern"]))
+
+
 def control_ids_from_selection(selection: dict) -> set[str]:
     ids: set[str] = set()
     for group in selection.get("control-selections", []):
@@ -323,7 +329,9 @@ def validate_fixture(
     expected_witness = load_json(vector_root / "expected-witness.json")
     schema_example = load_json(schema_root / "examples" / "evidence-claim.example.json")
     control_boundaries = load_json(specs_root / "control-boundaries.json")
+    verifier_contract = load_json(specs_root / "verifier-contract.json")
     control_boundaries_schema = load_json(specs_root / "schemas" / "control-boundaries.schema.json")
+    verifier_contract_schema = load_json(specs_root / "schemas" / "verifier-contract.schema.json")
     proof_bundle_schema = load_json(specs_root / "schemas" / "proof-bundle.schema.json")
     classification_result_schema = load_json(specs_root / "schemas" / "classification-result.schema.json")
     verification_result_schema = load_json(specs_root / "schemas" / "verification-result.schema.json")
@@ -339,6 +347,7 @@ def validate_fixture(
     }
 
     validate_schema_subset(control_boundaries, control_boundaries_schema, "control_boundaries", errors)
+    validate_schema_subset(verifier_contract, verifier_contract_schema, "verifier_contract", errors)
     mapping_model = control_boundaries["mappingModel"]
     if control_boundaries["mappingLevel"] != mapping_model["currentState"]["level"]:
         add_error(errors, "control-boundaries mappingLevel does not match mappingModel.currentState.level")
@@ -350,6 +359,9 @@ def validate_fixture(
         target_frameworks = {plan["framework"] for plan in mapping_status["targetAnchorPlans"]}
         if source_frameworks != target_frameworks:
             add_error(errors, f"control-boundaries {control['controlId']} targetAnchorPlans do not cover the same frameworks as sourceMappings")
+
+    if fixture not in verifier_contract["includedFixtures"]:
+        add_error(errors, f"{fixture}: fixture is missing from verifier-contract includedFixtures")
 
     oscal_paths = expected_oscal_paths(oscal_root, fixture)
     catalog = load_json(oscal_paths["catalog"])
@@ -390,11 +402,16 @@ def validate_fixture(
     }
     actual_counts = {value: 0 for value in result_key_map.values()}
     for result in actual_claim_results.values():
+        if result not in verifier_contract["typedBoundary"]["claimResults"]:
+            add_error(errors, f"{fixture}: proof-bundle result {result} is outside the verifier-contract")
+            continue
         actual_counts[result_key_map[result]] += 1
     if actual_counts != expected_summary["expectedCounts"]:
         add_error(errors, f"{fixture}: summary counts do not match expected vector")
     if actual_counts != proof_bundle["summary"]:
         add_error(errors, f"{fixture}: proof bundle summary is inconsistent with claim results")
+    if list(proof_bundle["summary"]) != verifier_contract["typedBoundary"]["summaryFields"]:
+        add_error(errors, f"{fixture}: proof bundle summary fields do not match verifier-contract")
 
     proof_runner = proof_bundle["proofRunner"]
     verified_claim_records = proof_runner["verifiedClaims"]
@@ -407,43 +424,18 @@ def validate_fixture(
     if proof_runner["importedModules"] != sorted({record["module"] for record in verified_claim_records}):
         add_error(errors, f"{fixture}: proofRunner importedModules do not match verifiedClaims")
     typed_boundary_layer = proof_runner["typedBoundaryLayer"]
-    if typed_boundary_layer["source"] != "LegalLean":
-        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer source must be LegalLean")
+    if proof_runner["status"] not in verifier_contract["typedBoundary"]["proofRunnerStatuses"]:
+        add_error(errors, f"{fixture}: proofRunner status is outside the verifier-contract")
+    if typed_boundary_layer["source"] != verifier_contract["typedBoundary"]["source"]:
+        add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer source does not match verifier-contract")
     dependency = typed_boundary_layer["dependency"]
     if dependency["package"] != "legal-lean":
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer dependency package must be legal-lean")
     if dependency["primaryImports"] != ["LegalLean.Core", "LegalLean.Defeasible", "LegalLean.Solver"]:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer primaryImports are inconsistent")
     expected_typed_modules = {
-        "OpenCompliance.Controls.Typed.TypedIdentity": {
-            "FormalisationBoundary.formal",
-            "FormalisationBoundary.boundary",
-            "RequiresHumanDetermination",
-        },
-        "OpenCompliance.Controls.Typed.TypedLogging": {
-            "FormalisationBoundary.formal",
-            "FormalisationBoundary.boundary",
-            "narrow_audit_logging_runtime",
-        },
-        "OpenCompliance.Controls.Typed.RiskAcceptance": {
-            "Defeats",
-            "risk_acceptance_override",
-        },
-        "OpenCompliance.Controls.Typed.DiscretionaryTerms": {
-            "Vague",
-            "judgment_boundary_inventory",
-        },
-        "OpenCompliance.Controls.Typed.ComplianceSolver": {
-            "LegalLean.Solver",
-            "minimal_claim_corpus",
-            "runtime_claim_decisions",
-        },
-        "OpenCompliance.Controls.Typed.PublicRuntime": {
-            "formalDecision",
-            "documentaryDecision",
-            "judgmentDecision",
-            "public_corridor_runtime_claim_decisions",
-        },
+        module: set(covers)
+        for module, covers in verifier_contract["typedBoundary"]["requiredModuleCoverage"].items()
     }
     actual_typed_modules = {
         item["module"]: set(item["covers"]) for item in typed_boundary_layer["typedModules"]
@@ -454,14 +446,14 @@ def validate_fixture(
     if set(typed_boundary_layer["runtimeConsumedClaims"]) != expected_runtime_consumed:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeConsumedClaims are inconsistent")
     expected_runtime_status = {
-        "typedControlResultsLive": True,
-        "riskAcceptanceDefeasibilityLive": True,
-        "discretionaryTermTypingLive": True,
-        "fullMinimalSolverAgreement": fixture == "minimal",
-        "pythonVerdictLayerReplaced": True,
+        flag: True for flag in verifier_contract["typedBoundary"]["requiredRuntimeStatusFlags"]
     }
+    expected_runtime_status["fullMinimalSolverAgreement"] = fixture == "minimal"
     if typed_boundary_layer["runtimeStatus"] != expected_runtime_status:
         add_error(errors, f"{fixture}: proofRunner typedBoundaryLayer runtimeStatus is inconsistent")
+    boundary_inventory = proof_runner["boundaryInventory"]
+    if set(boundary_inventory) != set(verifier_contract["typedBoundary"]["requiredBoundaryInventoryFields"]):
+        add_error(errors, f"{fixture}: proofRunner boundaryInventory fields do not match verifier-contract")
 
     validate_schema_subset(proof_bundle, proof_bundle_schema, f"{fixture}.proof_bundle", errors)
     validate_schema_subset(classification_result, classification_result_schema, f"{fixture}.classification_result", errors)
@@ -518,6 +510,13 @@ def validate_fixture(
     expected_path = "certificate.json" if expected_outcome == "certificate_issued" else "punch-list.json"
     if outcome_artifact_path != expected_path:
         add_error(errors, f"{fixture}: verification-result points at {outcome_artifact_path} but expected {expected_path}")
+    always_required = verifier_contract["artifactPolicies"]["alwaysRequired"]
+    outcome_required = verifier_contract["artifactPolicies"]["byVerificationOutcome"][expected_outcome]
+    for artifact_name in always_required + outcome_required:
+        descriptor = verifier_contract["fixtureArtifacts"][artifact_name]
+        resolved_paths = resolve_descriptor_paths(fixture_root, descriptor)
+        if not resolved_paths:
+            add_error(errors, f"{fixture}: required verifier-contract artifact {artifact_name} is missing")
     if verification_result["blockingIssueCount"] != (
         actual_counts["failed"] + actual_counts["judgmentRequired"] + actual_counts["evidenceMissing"]
         + actual_counts["staleEvidence"]
@@ -534,9 +533,13 @@ def validate_fixture(
         add_error(errors, f"{fixture}: classification-result organisation does not match proof bundle")
     if classification_result["profileId"] != proof_bundle["profileId"]:
         add_error(errors, f"{fixture}: classification-result profileId does not match proof bundle")
-    actual_route_counts = {"decidable": 0, "attestation": 0, "judgment": 0}
+    contract_routes = verifier_contract["typedBoundary"]["controlRoutes"]
+    actual_route_counts = {route: 0 for route in contract_routes}
     classification_items = {item["claimId"]: item for item in classification_result["items"]}
     for item in classification_result["items"]:
+        if item["route"] not in actual_route_counts:
+            add_error(errors, f"{fixture}: classification-result route {item['route']} is outside the verifier-contract")
+            continue
         actual_route_counts[item["route"]] = actual_route_counts.get(item["route"], 0) + 1
     if actual_route_counts != classification_result["routeSummary"]:
         add_error(errors, f"{fixture}: classification-result routeSummary is inconsistent with its items")
