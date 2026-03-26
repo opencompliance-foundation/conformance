@@ -251,6 +251,31 @@ def validate_payloads(evidence_claims: list[dict], schema_root: Path, errors: li
         validate_schema_subset(claim["payload"], schema, f"{claim['claimId']}.payload", errors)
 
 
+def validate_actor_trust_policies(specs_root: Path, evidence_claims: list[dict], errors: list[str]) -> None:
+    registry = load_json(specs_root / "actor-trust-policies.json")
+    registry_schema = load_json(specs_root / "schemas" / "actor-trust-policies.schema.json")
+    validate_schema_subset(registry, registry_schema, "actor_trust_policies", errors)
+    policies = {policy["policyId"]: policy for policy in registry["policies"]}
+    evidence_policies = {
+        policy_id for policy_id, policy in policies.items() if policy["surface"] == "evidence_claim"
+    }
+    for claim in evidence_claims:
+        policy_id = claim.get("trustPolicyRef")
+        if policy_id not in evidence_policies:
+            add_error(errors, f"{claim['claimId']}: trustPolicyRef is not in the evidence-claim trust policy registry")
+            continue
+        signer = claim.get("signer")
+        if signer and signer.get("trustPolicyId") != policy_id:
+            add_error(errors, f"{claim['claimId']}: signer.trustPolicyId does not match trustPolicyRef")
+
+
+def validate_schema_examples(schema_root: Path, errors: list[str]) -> None:
+    envelope_schema = load_json(schema_root / "schemas" / "evidence-claim.schema.json")
+    for example_path in sorted((schema_root / "examples").glob("*.json")):
+        example = load_json(example_path)
+        validate_schema_subset(example, envelope_schema, f"schema_example:{example_path.name}", errors)
+
+
 def validate_review_pilot(
     specs_root: Path,
     control_boundaries: dict,
@@ -328,6 +353,7 @@ def validate_fixture(
     expected_claim_results = load_json(vector_root / "expected-claim-results.json")
     expected_witness = load_json(vector_root / "expected-witness.json")
     schema_example = load_json(schema_root / "examples" / "evidence-claim.example.json")
+    delegated_schema_example = load_json(schema_root / "examples" / "evidence-claim.delegated-approver.example.json")
     control_boundaries = load_json(specs_root / "control-boundaries.json")
     verifier_contract = load_json(specs_root / "verifier-contract.json")
     control_boundaries_schema = load_json(specs_root / "schemas" / "control-boundaries.schema.json")
@@ -348,6 +374,8 @@ def validate_fixture(
 
     validate_schema_subset(control_boundaries, control_boundaries_schema, "control_boundaries", errors)
     validate_schema_subset(verifier_contract, verifier_contract_schema, "verifier_contract", errors)
+    validate_schema_examples(schema_root, errors)
+    validate_actor_trust_policies(specs_root, evidence_claims, errors)
     mapping_model = control_boundaries["mappingModel"]
     if control_boundaries["mappingLevel"] != mapping_model["currentState"]["level"]:
         add_error(errors, "control-boundaries mappingLevel does not match mappingModel.currentState.level")
@@ -622,6 +650,8 @@ def validate_fixture(
 
     if schema_example["controlMappings"][0]["controlId"] != "soc2.family.access_control":
         add_error(errors, "schema example was not updated to use proxy controlId values")
+    if delegated_schema_example["trustPolicyRef"] != "oc.trust.delegated-security-approver":
+        add_error(errors, "delegated schema example was not updated to use the delegated security trust policy")
 
     evidence_by_id = {claim["claimId"]: claim for claim in evidence_claims}
     proxy_target_ids = {target["id"] for target in proxy_targets["targets"]}
