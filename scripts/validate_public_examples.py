@@ -269,6 +269,48 @@ def validate_actor_trust_policies(specs_root: Path, evidence_claims: list[dict],
             add_error(errors, f"{claim['claimId']}: signer.trustPolicyId does not match trustPolicyRef")
 
 
+def validate_actor_identities(specs_root: Path, errors: list[str]) -> dict[str, dict]:
+    registry = load_json(specs_root / "actor-identities.json")
+    registry_schema = load_json(specs_root / "schemas" / "actor-identities.schema.json")
+    validate_schema_subset(registry, registry_schema, "actor_identities", errors)
+    identities = {identity["identityId"]: identity for identity in registry["identities"]}
+    for identity in registry["identities"]:
+        if "signed_artifact" in identity["surfaces"] and identity["actorType"] == "verifier_service":
+            if not identity.get("keyIds"):
+                add_error(errors, f"{identity['identityId']}: signed-artifact verifier identity is missing keyIds")
+    return identities
+
+
+def validate_registered_identity(
+    identities: dict[str, dict],
+    *,
+    label: str,
+    identity_id: str,
+    surface: str,
+    actor_type: str,
+    role: str | None,
+    trust_policy_id: str | None,
+    key_id: str | None,
+    errors: list[str],
+) -> None:
+    identity = identities.get(identity_id)
+    if identity is None:
+        add_error(errors, f"{label}: unknown identity {identity_id}")
+        return
+    if surface not in set(identity["surfaces"]):
+        add_error(errors, f"{label}: identity {identity_id} is not registered for {surface}")
+    if identity["actorType"] != actor_type:
+        add_error(errors, f"{label}: actorType mismatch for {identity_id}")
+    if trust_policy_id and trust_policy_id not in set(identity["trustPolicyIds"]):
+        add_error(errors, f"{label}: trustPolicyId is not registered for {identity_id}")
+    expected_role = identity.get("defaultSignerRole")
+    if expected_role is not None and role != expected_role:
+        add_error(errors, f"{label}: signer role mismatch for {identity_id}")
+    key_ids = identity.get("keyIds")
+    if key_id is not None and key_ids is not None and key_id not in set(key_ids):
+        add_error(errors, f"{label}: keyId is not registered for {identity_id}")
+
+
 def validate_schema_examples(schema_root: Path, errors: list[str]) -> None:
     envelope_schema = load_json(schema_root / "schemas" / "evidence-claim.schema.json")
     for example_path in sorted((schema_root / "examples").glob("*.json")):
@@ -376,6 +418,7 @@ def validate_fixture(
     validate_schema_subset(verifier_contract, verifier_contract_schema, "verifier_contract", errors)
     validate_schema_examples(schema_root, errors)
     validate_actor_trust_policies(specs_root, evidence_claims, errors)
+    actor_identities = validate_actor_identities(specs_root, errors)
     mapping_model = control_boundaries["mappingModel"]
     if control_boundaries["mappingLevel"] != mapping_model["currentState"]["level"]:
         add_error(errors, "control-boundaries mappingLevel does not match mappingModel.currentState.level")
@@ -409,6 +452,17 @@ def validate_fixture(
       add_error(errors, f"{fixture}: expected-witness bundleId does not match proof bundle")
     if witness_receipt["bundleId"] != bundle_id:
       add_error(errors, f"{fixture}: witness-receipt bundleId does not match proof bundle")
+    validate_registered_identity(
+        actor_identities,
+        label=f"{fixture}: witness-receipt witness",
+        identity_id=witness_receipt["witness"]["witnessId"],
+        surface="witness_receipt",
+        actor_type=witness_receipt["witness"]["witnessType"],
+        role=witness_receipt["witness"]["witnessRole"],
+        trust_policy_id=witness_receipt["witness"]["trustPolicyId"],
+        key_id=None,
+        errors=errors,
+    )
     if verification_result["bundleId"] != bundle_id:
       add_error(errors, f"{fixture}: verification-result bundleId does not match proof bundle")
     if replay_bundle["bundleId"] != bundle_id:
