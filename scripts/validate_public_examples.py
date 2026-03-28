@@ -913,7 +913,7 @@ def validate_fixture(
     }
     observed_claims: set[str] = set()
     for observation in assessment_results["assessment-results"]["results"][0]["observations"]:
-        observed_claims.update(re.findall(r"EX-CLAIM-\d+", observation.get("remarks", "")))
+        observed_claims.update(re.findall(r"EX-CLAIM-\d+[A-Z]*", observation.get("remarks", "")))
     if observed_claims != expected_observation_claims:
         add_error(errors, f"{fixture}: assessment-result observations do not cover the expected claim set")
 

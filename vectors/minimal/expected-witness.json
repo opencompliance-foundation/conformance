@@ -25,7 +25,7 @@
     {
       "artifactType": "proof_bundle",
       "path": "proof-bundle.json",
-      "sha256": "c4064afa211efdee5875d2a926f00d02bf186afc8e9ae93a19df5485dc91cc7e"
+      "sha256": "af18cb6ed168373c3d381562e6eec506d26f112b26674158d6dcdf903d121dfa"
     },
     {
       "artifactType": "trust_surface_report",
@@ -35,12 +35,12 @@
     {
       "artifactType": "verification_result",
       "path": "verification-result.json",
-      "sha256": "b16349ae08fe88a60dbea9177b218b1607ae8e88d4bc6acab93b2ff9453820a1"
+      "sha256": "ea8b7cca1042390528f938c015371d45dcd28d5b58ed4c96fb2327a50a542762"
     },
     {
       "artifactType": "punch_list",
       "path": "punch-list.json",
-      "sha256": "92c9da17e001f497bbb6f92452512152491e5508bb72c7f305ef8c726d06f866"
+      "sha256": "f1b8af07821cea8917d4d3acbde414375d6df5bb284732359755bd3d7113a48d"
     }
   ]
 }
