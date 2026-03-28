@@ -33,6 +33,17 @@
     "EX-CLAIM-120": "attested",
     "EX-CLAIM-121": "attested",
     "EX-CLAIM-122": "attested",
-    "EX-CLAIM-123": "judgment_required"
+    "EX-CLAIM-123": "judgment_required",
+    "EX-CLAIM-134": "attested",
+    "EX-CLAIM-135": "judgment_required",
+    "EX-CLAIM-136": "attested",
+    "EX-CLAIM-137": "attested",
+    "EX-CLAIM-138": "judgment_required",
+    "EX-CLAIM-139": "attested",
+    "EX-CLAIM-140": "attested",
+    "EX-CLAIM-141": "judgment_required",
+    "EX-CLAIM-142": "attested",
+    "EX-CLAIM-143": "attested",
+    "EX-CLAIM-144": "judgment_required"
   }
 }
