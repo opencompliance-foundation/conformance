@@ -10,22 +10,22 @@
     {
       "artifactType": "evidence_claims",
       "path": "evidence-claims.json",
-      "sha256": "311f474bf80236d03d0cf9df4f67a1dedc63d8baf7ced15c431f579caeda7606"
+      "sha256": "cd59f7837fd36fbf3b01b73bfd989b04301d1c17d3e7fbd2bc6769c0106ff8f8"
     },
     {
       "artifactType": "oscal_catalog",
       "path": "oscal/opencompliance-issued-catalog.json",
-      "sha256": "f6ffdb81567b41a545687cb5bbe884c715cad8d81270f0a54ecda98aeb5713ef"
+      "sha256": "84eae0d376d62fae655037429fe8e6235396d02c5d8e2f6505ed91466a1067e3"
     },
     {
       "artifactType": "oscal_profile",
       "path": "oscal/exampleco-issued-profile.json",
-      "sha256": "1f0fbd754f857ae88d5a16c38f0c20a2d97515810f70ee698dd39c6a6ae60887"
+      "sha256": "1935054db20f3b65da3fd5f5db39afd2c60c8065958028106d93de5d7399ea88"
     },
     {
       "artifactType": "proof_bundle",
       "path": "proof-bundle.json",
-      "sha256": "8c3c32857dd4553334cfefd0b41677be31e78bcdd18806e243d93f87c8eec602"
+      "sha256": "8c95238cf196efeea4a358d62d7e2e164fbd7bd7568446f84ffdc97426db149d"
     },
     {
       "artifactType": "trust_surface_report",
@@ -35,12 +35,12 @@
     {
       "artifactType": "verification_result",
       "path": "verification-result.json",
-      "sha256": "89d13093a939afbd763814c30c54cda56f38028ed45fe1a4cca5fc5b213cfb24"
+      "sha256": "3fedd6bdb6c3538e56c610c97a85b16eb756e75c853df8fe93074ea1beabae35"
     },
     {
       "artifactType": "certificate",
       "path": "certificate.json",
-      "sha256": "56432ced31cc58a35737232d33c50f1e4ca71c13f46abdfb94c268a320900d41"
+      "sha256": "34b95217db1ecf35a68d7153727e3e275066c827a67e8c9df62831d203ce49d1"
     }
   ]
 }
