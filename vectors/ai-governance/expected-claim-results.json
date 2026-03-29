@@ -12,6 +12,10 @@
     "EX-CLAIM-709": "attested",
     "EX-CLAIM-710": "attested",
     "EX-CLAIM-711": "attested",
-    "EX-CLAIM-712": "judgment_required"
+    "EX-CLAIM-712": "judgment_required",
+    "EX-CLAIM-713": "proved",
+    "EX-CLAIM-714": "proved",
+    "EX-CLAIM-715": "attested",
+    "EX-CLAIM-716": "proved"
   }
 }
